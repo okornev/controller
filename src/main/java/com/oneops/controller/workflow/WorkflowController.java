@@ -21,20 +21,22 @@ import com.oneops.cms.dj.domain.CmsDeployment;
 import com.oneops.cms.simple.domain.CmsActionOrderSimple;
 import com.oneops.cms.simple.domain.CmsWorkOrderSimple;
 import com.oneops.controller.cms.DeploymentNotifier;
-import org.activiti.engine.ActivitiException;
-import org.activiti.engine.ActivitiObjectNotFoundException;
-import org.activiti.engine.ActivitiOptimisticLockingException;
-import org.activiti.engine.RuntimeService;
-import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
-import org.activiti.engine.runtime.Execution;
-import org.activiti.engine.runtime.ProcessInstance;
+import io.takari.bpm.EngineBuilder;
+import io.takari.bpm.ProcessDefinitionProvider;
+import io.takari.bpm.api.*;
+import io.takari.bpm.model.ProcessDefinition;
+import io.takari.bpm.persistence.InMemPersistenceManager;
+import io.takari.bpm.task.ServiceTaskRegistry;
+import io.takari.bpm.task.ServiceTaskRegistryImpl;
+import io.takari.bpm.xml.Parser;
+import io.takari.bpm.xml.ParserException;
+import io.takari.bpm.xml.activiti.ActivitiParser;
 import org.apache.ibatis.exceptions.PersistenceException;
 import org.apache.log4j.Logger;
 
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * The Class WorkflowController.
@@ -52,7 +54,7 @@ public class WorkflowController {
 	
 	private static final int STEP_FINISH_RETRIES = 3;
 	
-	private RuntimeService runtimeService;
+	private Engine engine;
 
 	public DeploymentNotifier getNotifier() {
 		return notifier;
@@ -66,15 +68,28 @@ public class WorkflowController {
 
 
 	
-	
-	/**
-	 * Sets the runtime service.
-	 *
-	 * @param runtimeService the new runtime service
-	 */
-	public void setRuntimeService(RuntimeService runtimeService) {
-		this.runtimeService = runtimeService;
+
+
+	public void init() throws ParserException, ExecutionException {
+		Map<String, ProcessDefinition> map = new HashMap<>();
+		for (String bpm:new String[]{"deploybom.bpmn20.xml", "deployrelease.bpmn20.xml"}) {
+			InputStream in = ClassLoader.getSystemResourceAsStream(bpm);
+			Parser p = new ActivitiParser();
+			ProcessDefinition pd = p.parse(in);
+			map.put(pd.getId(), pd);
+		}
+		
+		ServiceTaskRegistry taskRegistry = new ServiceTaskRegistryImpl();
+
+		engine = new EngineBuilder()
+				.withDefinitionProvider(map::get)
+				.withTaskRegistry(taskRegistry)
+				.withPersistenceManager(new InMemPersistenceManager())
+				.build();
+
+		engine.start("", "defId", null);
 	}
+	
 
 	/**
 	 * Start dpmt process.
@@ -83,27 +98,25 @@ public class WorkflowController {
 	 * @param params the params
 	 * @return the string
 	 */
-	public String startDpmtProcess(String processKey, Map<String,Object> params){
+	public String startDpmtProcess(String processKey, Map<String,Object> params) throws ExecutionException {
 		
 		CmsDeployment dpmt = (CmsDeployment)params.get("dpmt");
 		String processId = dpmt.getProcessId();
 		if (processId == null) {
-			logger.info("starting new process for " + processKey + " with params: " + params.toString());
-			ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, params);
-			logger.info("started process with id - " + pi.getId());
-			return pi.getId();
+			return startNewProcess(processKey, params);
 		} else {
 			String[] procParts = processId.split("!");
-			String procInstanceId = procParts[0]; 
-			ProcessInstance process = runtimeService.createProcessInstanceQuery().processInstanceId(procInstanceId).singleResult();
-			if (process != null) {
-				ExecutionEntity exec = (ExecutionEntity)process;
+			String procInstanceId = procParts[0];
+			Collection<Event> events = engine.getEventService().getEvents(procInstanceId);
+			Event event = (events==null || events.size()==0)?null:events.iterator().next();
+			if (event != null) {
+				
 				//if the process is in waiting for pause state - resume
-				if (exec.isActive() && exec.getActivityId().equals("dpmtPauseWait")) {
+				if (event.getDefinitionId().equals("dpmtPauseWait")) { // todo: fix this
 					//sedn resume notification
 					notifier.sendDeploymentNotification(dpmt, "Deployment resumed by " + dpmt.getUpdatedBy(),
 							notifier.createDeploymentNotificationText(dpmt), NotificationSeverity.info, null);
-					return exec.getId();
+					return event.getProcessBusinessKey();
 					//runtimeService.signal(exec.getId());
 				} else {
 					//lets check if there are any workorders wating for completion
@@ -150,7 +163,13 @@ public class WorkflowController {
 			}
 		}
 		//return null;
-	};
+	}
+
+	public String startNewProcess(String processKey, Map<String, Object> params) throws ExecutionException {
+		return startNewProcess(processKey, params);
+	}
+
+	;
 	
 	/**
 	 * Start release process.
@@ -159,12 +178,9 @@ public class WorkflowController {
 	 * @param params the params
 	 * @return the string
 	 */
-	public String startReleaseProcess(String processKey, Map<String,Object> params){
-		logger.info("starting process for " + processKey + " with params: " + params.toString());
-		ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, params);
-		logger.info("started process with id - " + pi.getId());
-		return pi.getId();
-	};
+	public String startReleaseProcess(String processKey, Map<String,Object> params) throws ExecutionException {
+		return startNewProcess(processKey, params);	
+	}
 	
 	/**
 	 * Start ops process.
@@ -173,11 +189,8 @@ public class WorkflowController {
 	 * @param params the params
 	 * @return the string
 	 */
-	public String startOpsProcess(String processKey, Map<String,Object> params){
-		logger.info("starting process for " + processKey + " with params: " + params.toString());
-		ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, params);
-		logger.info("started process with id - " + pi.getId());
-		return pi.getId();
+	public String startOpsProcess(String processKey, Map<String,Object> params) throws ExecutionException {
+		return startNewProcess(processKey, params);
 	};
 
 	
@@ -186,14 +199,15 @@ public class WorkflowController {
 	 *
 	 * @param processId the process id
 	 */
-	public void pokeProcess(String processId){
-
-	    Execution execution = runtimeService.createExecutionQuery()
-	      .processInstanceId(processId)
-	      .singleResult();
-
-	    runtimeService
-	    .signal(execution.getId());    	
+	public void pokeProcess(String processId) throws ExecutionException {
+		
+		engine.resume(processId, null, null); // todo: fix it
+//	    Execution execution = runtimeService.createExecutionQuery()
+//	      .processInstanceId(processId)
+//	      .singleResult();
+//
+//	    runtimeService
+//	    .signal(execution.getId());    	
 		
 		logger.info("Poked process with id - " + processId);
 	};
@@ -255,12 +269,12 @@ public class WorkflowController {
 	 *
 	 * @param processId the process id
 	 * @param executionId the execution id
-	 * @param waitTaskId the wait task id
 	 * @param params the params
 	 */
 	public void pokeSubProcess(String processId, String executionId, Map<String,Object> params){
-
+		
         List<Execution> subExecutions = runtimeService.createExecutionQuery().processInstanceId(processId).activityId("pwo").list();
+        engine.start();
         
 		int retries = subExecutions.size() > 0 ? subExecutions.size() + 1 : 3;
 		

@@ -30,7 +30,6 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.activiti.engine.ActivitiException;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.util.IndentPrinter;
@@ -144,7 +143,7 @@ public class InductorListener implements MessageListener {
 				try {
 					processResponseMessage((TextMessage)message);
 					//session.commit();
-	    		} catch (ActivitiException ae) {
+	    		} catch (Exception ae) {
 	    			logger.error("ActivityException in onMessage ", ae);
 	    			logger.error("Will retry in 10 seconds \n" + ((TextMessage)message).getText());
 	    			//session.rollback();

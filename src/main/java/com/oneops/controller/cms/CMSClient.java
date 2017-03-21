@@ -31,7 +31,8 @@ import com.oneops.cms.cm.ops.service.OpsProcedureProcessor;
 import com.oneops.cms.cm.service.CmsCmProcessor;
 import com.oneops.cms.dj.domain.*;
 import com.oneops.cms.dj.service.CmsDpmtProcessor;
-import org.activiti.engine.delegate.DelegateExecution;
+import io.takari.bpm.api.Execution;
+import io.takari.bpm.api.ExecutionContext;
 import org.apache.log4j.Logger;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -181,7 +182,7 @@ public class CMSClient {
      * @return the work orders
      * @throws GeneralSecurityException the general security exception
      */
-    public void getWorkOrderIds(DelegateExecution exec) {
+    public void getWorkOrderIds(ExecutionContext exec) {
         CmsDeployment dpmt = (CmsDeployment) exec.getVariable(DPMT);
         Integer execOrder = (Integer) exec.getVariable(EXEC_ORDER);
         long startTime = System.currentTimeMillis();
@@ -219,7 +220,7 @@ public class CMSClient {
      * @return the work orders
      * @throws GeneralSecurityException the general security exception
      */
-    public CmsWorkOrderSimple getWorkOrder(DelegateExecution exec, CmsWorkOrderSimple dpmtRec) {
+    public CmsWorkOrderSimple getWorkOrder(ExecutionContext exec, CmsWorkOrderSimple dpmtRec) {
         Integer execOrder = (Integer) exec.getVariable(EXEC_ORDER);
         CmsDeployment dpmt = (CmsDeployment) exec.getVariable(DPMT);
         logger.info("Geting work order pmtRec = " + dpmtRec.getDpmtRecordId() + " for dpmt id = " + dpmtRec.getDeploymentId() + " rfcId =  " + dpmtRec.getRfcId() + " step #" + execOrder);
@@ -268,14 +269,14 @@ public class CMSClient {
     }
 
 
-    private void handleWoError2(DelegateExecution exec, CmsDeployment dpmt, String descr) {
+    private void handleWoError2(ExecutionContext exec, CmsDeployment dpmt, String descr) {
         dpmt.setDeploymentState(FAILED);
         dpmt.setDescription(descr);
         exec.setVariable(DPMT, dpmt);
         exec.setVariable("dpmtrecs", new ArrayList<CmsWorkOrderSimple>());
     }
 
-    private void handleGetWoError(DelegateExecution exec, CmsDeployment dpmt, CmsWorkOrderSimple dpmtRec, String descr) {
+    private void handleGetWoError(ExecutionContext exec, CmsDeployment dpmt, CmsWorkOrderSimple dpmtRec, String descr) {
         dpmt.setDeploymentState(FAILED);
         dpmt.setDescription(descr);
         exec.setVariable(DPMT, dpmt);
@@ -289,7 +290,7 @@ public class CMSClient {
      * @param exec the exec
      * @throws GeneralSecurityException the general security exception
      */
-    public void checkDpmt(DelegateExecution exec) throws GeneralSecurityException {
+    public void checkDpmt(ExecutionContext exec) throws GeneralSecurityException {
         CmsDeployment dpmt = (CmsDeployment) exec.getVariable(DPMT);
         try {
             //CmsDeployment cmsDpmt = retryTemplate.execute(retryContext -> restTemplate.getForObject(serviceUrl + "dj/simple/deployments/{deploymentId}", CmsDeployment.class, dpmt.getDeploymentId()));
@@ -320,7 +321,7 @@ public class CMSClient {
      * @param wo       the wo
      * @param newState the new state
      */
-    public void updateWoState(DelegateExecution exec, CmsWorkOrderSimple wo, String newState) {
+    public void updateWoState(Execution ex, ExecutionContext exec, CmsWorkOrderSimple wo, String newState) {
 
         wo.setDpmtRecordState(newState);
 
@@ -329,7 +330,7 @@ public class CMSClient {
         } else {
             CmsDpmtRecord dpmtRec = new CmsDpmtRecord();
             if (newState.equalsIgnoreCase(INPROGRESS)) {
-                dpmtRec.setComments("start processing with task Id = " + exec.getId());
+                dpmtRec.setComments("start processing with task Id = " + ex.getId());
             }
             dpmtRec.setDpmtRecordId(wo.getDpmtRecordId());
             dpmtRec.setDeploymentId(wo.getDeploymentId());
@@ -403,10 +404,10 @@ public class CMSClient {
      * @param exec the exec
      * @param dpmt the dpmt
      */
-    public void setDpmtProcessId(DelegateExecution exec, CmsDeployment dpmt) {
+    public void setDpmtProcessId(Execution ex, ExecutionContext exec, CmsDeployment dpmt) {
 
-        String processId = exec.getProcessInstanceId();
-        String execId = exec.getId();
+        String processId = ex.getBusinessKey();
+        String execId = ex.getId().toString();
         // lets create strip down dpmt to update just a processId and updatedBy
         CmsDeployment dpmtParam = new CmsDeployment();
         dpmtParam.setDeploymentId(dpmt.getDeploymentId());
@@ -431,7 +432,7 @@ public class CMSClient {
      * @param newState the new state
      * @throws InterruptedException
      */
-    public void updateDpmtState(DelegateExecution exec, CmsDeployment dpmt, String newState) {
+    public void updateDpmtState(ExecutionContext exec, CmsDeployment dpmt, String newState) {
         
         if (dpmt.getDeploymentState().equalsIgnoreCase("active")) {
             CmsDeployment clone = new CmsDeployment();
@@ -468,7 +469,7 @@ public class CMSClient {
      *
      * @param exec the exec
      */
-    public void incExecOrder(DelegateExecution exec) {
+    public void incExecOrder(ExecutionContext exec) {
         Integer newExecOrder = (Integer) exec.getVariable(EXEC_ORDER) + 1;
         if (exec.hasVariable(DPMT)) {
             CmsDeployment dpmt = (CmsDeployment) exec.getVariable(DPMT);
@@ -498,7 +499,7 @@ public class CMSClient {
      * @return the action orders
      * @throws GeneralSecurityException the general security exception
      */
-    public void getActionOrders(DelegateExecution exec) throws GeneralSecurityException {
+    public void getActionOrders(ExecutionContext exec) throws GeneralSecurityException {
         CmsOpsProcedure proc = (CmsOpsProcedure) exec.getVariable("proc");
         Integer execOrder = (Integer) exec.getVariable(EXEC_ORDER);
         logger.info("Geting action orders for procedure id = " + proc.getProcedureId());
@@ -530,7 +531,7 @@ public class CMSClient {
      * @param exec the exec
      * @param proc the proc
      */
-    public void updateProcedureState(DelegateExecution exec, CmsOpsProcedure proc) {
+    public void updateProcedureState(ExecutionContext exec, CmsOpsProcedure proc) {
         NotificationMessage notify = new NotificationMessage();
         notify.setType(NotificationType.procedure);
         if (proc.getProcedureState().equals(OpsProcedureState.active)) {
@@ -555,7 +556,7 @@ public class CMSClient {
      * @param aos       the aos
      * @param newState the new state
      */
-    public void updateActionOrderState(DelegateExecution exec, CmsActionOrderSimple aos, String newState) {
+    public void updateActionOrderState(ExecutionContext exec, CmsActionOrderSimple aos, String newState) {
 
         aos.setActionState(OpsActionState.valueOf(newState));
         try {
@@ -603,7 +604,7 @@ public class CMSClient {
      * @return the env4 release
      * @throws GeneralSecurityException the general security exception
      */
-    public void getEnv4Release(DelegateExecution exec) throws GeneralSecurityException {
+    public void getEnv4Release(ExecutionContext exec) throws GeneralSecurityException {
         CmsRelease release = (CmsRelease) exec.getVariable("release");
 
         String[] nsParts = release.getNsPath().split("/");
@@ -638,7 +639,7 @@ public class CMSClient {
      * @param exec the exec
      * @throws GeneralSecurityException the general security exception
      */
-    public void commitAndDeployRelease(DelegateExecution exec) throws GeneralSecurityException {
+    public void commitAndDeployRelease(ExecutionContext exec) throws GeneralSecurityException {
         CmsRelease release = (CmsRelease) exec.getVariable("release");
         CmsCISimple env = (CmsCISimple) exec.getVariable("env");
         logger.info("Committing and deploying manifest release with id = " + release.getReleaseId());
@@ -743,12 +744,9 @@ public class CMSClient {
     }
 
 
-    private void setOrCreateLocalVar(DelegateExecution exec, String name, Object value) {
-        if (exec.getVariableNamesLocal().contains(name)) {
-            exec.setVariableLocal(name, value);
-        } else {
-            exec.createVariableLocal(name, value);
-        }
+    private void setOrCreateLocalVar(ExecutionContext exec, String name, Object value) {
+
+            exec.setVariable(name, value);
     }
 
 

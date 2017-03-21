@@ -23,10 +23,21 @@
         <httpclient.version>4.5.1</httpclient.version>
         <spring-retry.version>1.1.2.RELEASE</spring-retry.version>
         <postgresql.version>9.0-801.jdbc4</postgresql.version>
+        <bpm.version>0.14.2</bpm.version>
     </properties>
 
-
     <dependencies>
+        
+        <dependency>
+            <groupId>io.takari.bpm</groupId>
+            <artifactId>bpm-engine-impl</artifactId>
+            <version>${bpm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.takari.bpm</groupId>
+            <artifactId>activiti-compat</artifactId>
+            <version>${bpm.version}</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -106,28 +117,28 @@
             <artifactId>cglib</artifactId>
             <version>2.2.2</version>
         </dependency>
-        <dependency>
-            <groupId>org.activiti</groupId>
-            <artifactId>activiti-engine</artifactId>
-            <version>${activiti.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.activiti</groupId>
-            <artifactId>activiti-engine</artifactId>
-            <version>${activiti.version}</version>
-            <classifier>sources</classifier>
-        </dependency>
-        <dependency>
-            <groupId>org.activiti</groupId>
-            <artifactId>activiti-spring</artifactId>
-            <version>${activiti.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.activiti</groupId>
-            <artifactId>activiti-spring</artifactId>
-            <version>${activiti.version}</version>
-            <classifier>sources</classifier>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.activiti</groupId>-->
+            <!--<artifactId>activiti-engine</artifactId>-->
+            <!--<version>${activiti.version}</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.activiti</groupId>-->
+            <!--<artifactId>activiti-engine</artifactId>-->
+            <!--<version>${activiti.version}</version>-->
+            <!--<classifier>sources</classifier>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.activiti</groupId>-->
+            <!--<artifactId>activiti-spring</artifactId>-->
+            <!--<version>${activiti.version}</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.activiti</groupId>-->
+            <!--<artifactId>activiti-spring</artifactId>-->
+            <!--<version>${activiti.version}</version>-->
+            <!--<classifier>sources</classifier>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -230,6 +241,11 @@
       </repository>
     </repositories-->
     <repositories>
+        <repository>
+            <id>takari</id>
+            <name>takari releases</name>
+            <url>https://repository.takari.io/content/repositories/releases</url>
+        </repository>
         <repository>
             <id>org.activiti</id>
             <name>activiti workflow engine repo</name>

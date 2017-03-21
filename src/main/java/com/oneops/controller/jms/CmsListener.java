@@ -25,7 +25,6 @@ import com.oneops.cms.dj.domain.CmsDeployment;
 import com.oneops.cms.dj.domain.CmsRelease;
 import com.oneops.controller.cms.DeploymentNotifier;
 import com.oneops.controller.workflow.WorkflowController;
-import org.activiti.engine.ActivitiException;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.util.IndentPrinter;
@@ -133,8 +132,8 @@ public class CmsListener implements MessageListener {
 	                    }
 					}
 					//session.commit();
-	    		} catch (ActivitiException ae) {
-	    			logger.error("ActivityException in onMessage", ae);
+	    		} catch (Exception ae) {
+	    			logger.error("Exception in onMessage", ae);
 	    			//session.rollback();
 	    			throw ae;
 	    		}

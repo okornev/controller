@@ -19,9 +19,6 @@ package com.oneops.controller.web;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.engine.RuntimeService;
-import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
-import org.activiti.engine.runtime.ProcessInstance;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Controller;
@@ -42,16 +39,16 @@ public class CtrlrServlet {
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	private WoDispatcher woDispatcher;
-	private RuntimeService runtimeService;
+//	private RuntimeService runtimeService;
 	
 	/**
 	 * Sets the runtime service.
 	 *
 	 * @param runtimeService the new runtime service
 	 */
-	public void setRuntimeService(RuntimeService runtimeService) {
-		this.runtimeService = runtimeService;
-	}
+//	public void setRuntimeService(RuntimeService runtimeService) {
+//		this.runtimeService = runtimeService;
+//	}
 	
 	/**
 	 * Sets the wo dispatcher.
@@ -94,15 +91,15 @@ public class CtrlrServlet {
 	public String test()
     {
 		logger.info("Resuming crashed processes!!!");
-		List<ProcessInstance> processes = runtimeService.createProcessInstanceQuery().active().list();
-		
-		for (ProcessInstance process : processes) {
-			ExecutionEntity exec = (ExecutionEntity)process;
-			if (exec.isActive() && exec.getActivityId().equals("ackStart")) {
-				exec.getId();
-				runtimeService.signal(exec.getId());
-			}
-		}
+//		List<ProcessInstance> processes = runtimeService.createProcessInstanceQuery().active().list();
+//		
+//		for (ProcessInstance process : processes) {
+//			ExecutionEntity exec = (ExecutionEntity)process;
+//			if (exec.isActive() && exec.getActivityId().equals("ackStart")) {
+//				exec.getId();
+//				runtimeService.signal(exec.getId());
+//			}
+//		}
 		return "Resumed all processes";
 	}
 	

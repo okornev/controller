@@ -27,7 +27,7 @@ import com.oneops.cms.dj.domain.CmsDpmtRecord;
 import com.oneops.cms.simple.domain.CmsRfcCISimple;
 import com.oneops.cms.util.CmsConstants;
 import com.oneops.util.ReliableExecutor;
-import org.activiti.engine.delegate.DelegateExecution;
+import io.takari.bpm.api.ExecutionContext;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.web.client.HttpClientErrorException;
@@ -129,7 +129,7 @@ public class DeploymentNotifier {
         this.antennaClient = antennaClient;
     }
 
-    protected void sendProcNotification(CmsOpsProcedure proc, DelegateExecution exec) {
+    protected void sendProcNotification(CmsOpsProcedure proc, ExecutionContext exec) {
         try {
             CmsCI anchorCi = (CmsCI) exec.getVariable("procanchor");
             NotificationMessage notify = new NotificationMessage();

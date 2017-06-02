@@ -63,9 +63,6 @@ public class WorkflowController {
 	}
 
 	private DeploymentNotifier notifier;
-
-
-	
 	
 	/**
 	 * Sets the runtime service.
@@ -84,7 +81,6 @@ public class WorkflowController {
 	 * @return the string
 	 */
 	public String startDpmtProcess(String processKey, Map<String,Object> params){
-		
 		CmsDeployment dpmt = (CmsDeployment)params.get("dpmt");
 		String processId = dpmt.getProcessId();
 		if (processId == null) {
@@ -151,7 +147,7 @@ public class WorkflowController {
 		}
 		//return null;
 	};
-	
+
 	/**
 	 * Start release process.
 	 *
@@ -174,6 +170,7 @@ public class WorkflowController {
 	 * @return the string
 	 */
 	public String startOpsProcess(String processKey, Map<String,Object> params){
+
 		logger.info("starting process for " + processKey + " with params: " + params.toString());
 		ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, params);
 		logger.info("started process with id - " + pi.getId());

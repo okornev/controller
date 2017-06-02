@@ -14,7 +14,7 @@
         <property name="url" value="jdbc:postgresql://${CMS_DB_HOST}/kloopzdb?autoReconnect=true&amp;ApplicationName=controller-${ONEOPS_COMPUTE_CI_ID:0}" />
         <property name="username" value="${CMS_DB_USER}" />
         <property name="password" value="${CMS_DB_PASS}" />
-        <property name="maxActive" value="10" />
+        <property name="maxActive" value="${C_POOL_SIZE:20}" />
         <property name="maxIdle" value="5" />
         <property name="testOnBorrow" value="true" />
         <property name="validationQuery" value="select 1" />
@@ -84,6 +84,7 @@
         <property name="clazzMapper" ref="clazzMapper" />
         <property name="relationMapper" ref="relationMapper" />
         <property name="mdValidator" ref="cmsMdValidator" />
+        <property name="cacheEnabled" value="${CONTROLLER_MD_CACHE_ENABLED:true}"/>
     </bean>
 	
 	<bean id="cmsNsProcessor" class="com.oneops.cms.ns.service.CmsNsProcessor">
@@ -188,6 +189,7 @@
 	    <property name="colProcessor" ref="colProcessor" />
 	    <property name="offeringMatcher" ref="offeringMatcher" />
 		<property name="expressionEvaluator" ref="expressionEvaluator" />
+		<property name="controllerCache" ref="controllerCache" />
 	</bean>
 	
 	<bean id="expressionEvaluator" class="com.oneops.controller.cms.ExpressionEvaluator">
@@ -196,5 +198,10 @@
 	</bean>
 	
 	<bean id="exprParser" class="org.springframework.expression.spel.standard.SpelExpressionParser" />
-    
+
+
+	<bean id="controllerCache" class="com.oneops.controller.cms.ControllerCache">
+		<property name="mdProcessor" ref="cmsMdProcessor"/>
+		<property name="cmsCmProcessor" ref="cmsCmProcessor" />
+	</bean>
 </beans>

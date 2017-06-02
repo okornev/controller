@@ -45,6 +45,9 @@ import com.oneops.cms.simple.domain.CmsWorkOrderSimple;
 import com.oneops.cms.util.CmsError;
 import com.oneops.cms.util.CmsUtil;
 import com.oneops.cms.util.domain.AttrQueryCondition;
+import com.oneops.cms.util.domain.CmsVar;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -77,6 +80,7 @@ public class CmsWoProvider {
     private CmsUtil cmsUtil;
     private OfferingsMatcher offeringMatcher;
     private ExpressionEvaluator expressionEvaluator;
+	private ControllerCache controllerCache;
 
     /**
      * Sets the cms util.
@@ -168,8 +172,7 @@ public class CmsWoProvider {
      * @return the action orders
      */
     public List<CmsActionOrder> getActionOrders(long procedureId, OpsProcedureState state, Integer execOrder) {
-
-
+        checkControllerCache();
         List<CmsActionOrder> aorders = opsMapper.getActionOrders(procedureId, state, execOrder);
         for (CmsActionOrder ao : aorders) {
             CmsCI ci = cmProcessor.getCiById(ao.getCiId());
@@ -328,6 +331,7 @@ public class CmsWoProvider {
     }
 
     public CmsWorkOrderSimple getWorkOrderSimple(long dpmtRecordId, String state, Integer execOrder) {
+        checkControllerCache();
         CmsWorkOrder wo = getWorkOrder(dpmtRecordId, state, execOrder);
         if (wo != null) {
             return cmsUtil.custWorkOrder2Simple(wo);
@@ -335,6 +339,12 @@ public class CmsWoProvider {
             return null;
         }
     }
+
+    private void checkControllerCache() {
+		if (controllerCache != null) {
+			controllerCache.invalidateMdCacheIfRequired();
+		}
+	}
 
     public CmsWorkOrder getWorkOrder(long dpmtRecordId, String state, Integer execOrder) {
 
@@ -401,12 +411,13 @@ public class CmsWoProvider {
         }
 
         if (!manifestToTemplateMap.containsKey(manifestCiId)) {
-            throw new DJException(CmsError.CMS_CANT_FIGURE_OUT_TEMPLATE_FOR_MANIFEST_ERROR,
-                    "Can not find pack template for manifest component id=" + manifestCiId + "; name - " + workOrder.getPayLoad().get("RealizedAs").get(0).getCiName());
-        }
-
-        processPayLoadDef(workOrder, manifestToTemplateMap.get(manifestCiId), cloudVars, globalVars, localVars);
-
+            //throw new DJException(CmsError.CMS_CANT_FIGURE_OUT_TEMPLATE_FOR_MANIFEST_ERROR,
+        	//Don't throw an exception in case no pack component could be found.
+        	//If this is the case - pack component was removed and this should be a delete WO
+        	logger.warn("Can not find pack template for manifest component id=" + manifestCiId + "; name - " + workOrder.getPayLoad().get("RealizedAs").get(0).getCiName());
+        } else {
+        	processPayLoadDef(workOrder, manifestToTemplateMap.get(manifestCiId), cloudVars, globalVars, localVars);
+        }	
 
         //from here all payloads are default ones unless overriden by the custom payload definitions
         //put proxy
@@ -451,9 +462,22 @@ public class CmsWoProvider {
         //add matching compliance objects
         workOrder.putPayLoadEntry(EXTRA_RUNLIST_PAYLOAD_NAME, getMatchingCloudCompliance(workOrder));
 
+        addVarsForConfig(workOrder);
+
         return workOrder;
     }
 
+    private void addVarsForConfig(CmsWorkOrder workOrder) {
+        String clazz = cmsUtil.getShortClazzName(workOrder.getRfcCi().getCiClassName());
+        List<CmsVar> vars = cmProcessor.getCmVarByLongestMatchingCriteria(clazz + ".%", workOrder.getRfcCi().getNsPath());
+        if (vars != null && !vars.isEmpty()) {
+            Map<String, String> varMap = vars.stream().collect(Collectors.toMap(var -> {
+                    return StringUtils.substringAfter(var.getName(), clazz + ".");
+                }, 
+                CmsVar::getValue));
+            workOrder.setConfig(varMap);
+        }
+    }
 
     private List<CmsRfcCI> getRequiredOfferings(CmsWorkOrder workOrder) {
 
@@ -892,5 +916,9 @@ public class CmsWoProvider {
     public void setExpressionEvaluator(ExpressionEvaluator expressionEvaluator) {
         this.expressionEvaluator = expressionEvaluator;
     }
+
+	public void setControllerCache(ControllerCache controllerCache) {
+		this.controllerCache = controllerCache;
+	}
 
 }
